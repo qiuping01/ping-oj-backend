@@ -29,7 +29,7 @@ public class QuestionEditRequest implements Serializable {
     /**
      * 标签列表（json 数组）
      */
-    private String tags;
+    private List<String> tags;
 
     /**
      * 题目答案

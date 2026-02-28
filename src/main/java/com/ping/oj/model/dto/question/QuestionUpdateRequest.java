@@ -4,6 +4,7 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 /**
  * 题目更新请求
@@ -29,7 +30,7 @@ public class QuestionUpdateRequest implements Serializable {
     /**
      * 标签列表（json 数组）
      */
-    private String tags;
+    private List<String> tags;
 
     /**
      * 题目答案
@@ -54,7 +55,7 @@ public class QuestionUpdateRequest implements Serializable {
     /**
      * 判题配置（json 对象）
      */
-    private String judgeConfig;
+    private JudgeConfig judgeConfig;
 
     /**
      * 点赞数
