@@ -1,14 +1,17 @@
 package com.ping.oj.model.dto.questionsubmit;
 
+import com.ping.oj.common.PageRequest;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 
 /**
  * 题目提交查询请求
  **/
+@EqualsAndHashCode(callSuper = true)
 @Data
-public class QuestionSubmitQueryRequest implements Serializable {
+public class QuestionSubmitQueryRequest extends PageRequest implements Serializable {
 
     /**
      * 编程语言
