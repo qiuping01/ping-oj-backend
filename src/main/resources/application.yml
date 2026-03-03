@@ -99,3 +99,7 @@ knife4j:
         api-rule: package
         api-rule-resources:
           - com.ping.oj.controller
+
+# 代码沙箱
+codesandbox:
+  type: thirdParty
