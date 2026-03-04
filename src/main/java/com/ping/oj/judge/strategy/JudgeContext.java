@@ -3,6 +3,7 @@ package com.ping.oj.judge.strategy;
 import com.ping.oj.model.dto.question.JudgeCase;
 import com.ping.oj.model.dto.questionsubmit.JudgeInfo;
 import com.ping.oj.model.entity.Question;
+import com.ping.oj.model.entity.QuestionSubmit;
 import lombok.Data;
 
 import java.util.List;
@@ -37,4 +38,9 @@ public class JudgeContext {
      * 题目
      */
     private Question question;
+
+    /**
+     * 题目提交
+     */
+    private QuestionSubmit questionSubmit;
 }

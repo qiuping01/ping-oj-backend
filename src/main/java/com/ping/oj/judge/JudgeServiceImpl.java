@@ -39,6 +39,9 @@ public class JudgeServiceImpl implements JudgeService {
 
     @Value("${codesandbox.type:example}")
     private String type;
+    
+    @Resource
+    private JudgeManager judgeManager;
 
     /**
      * 根据题号进行判题
@@ -98,9 +101,9 @@ public class JudgeServiceImpl implements JudgeService {
         judgeContext.setOutputList(executeCodeResponse.getOutputList());
         judgeContext.setJudgeCaseList(judgeCaseList);
         judgeContext.setQuestion(question);
+        judgeContext.setQuestionSubmit(questionSubmit);
         // 使用默认判题策略
-        JudgeStrategy judgeStrategy = new DefaultJudgeStrategy();
-        JudgeInfo judgeInfoResponse = judgeStrategy.doJudge(judgeContext);
+        JudgeInfo judgeInfoResponse = judgeManager.doJudge(judgeContext);
         // 4. 更新数据库中题目的判题状态和信息
         questionSubmitUpdate = new QuestionSubmit();
         questionSubmitUpdate.setId(questionSubmitId);
