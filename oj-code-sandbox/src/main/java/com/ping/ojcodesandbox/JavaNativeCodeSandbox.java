@@ -26,12 +26,12 @@ public class JavaNativeCodeSandbox implements CodeSandbox {
 
     private static final String GLOBAL_JAVA_CLASS_NAME = "Main.java";
 
+    private static final long TIME_OUT = 10000L;
+
     @Override
     public ExecuteCodeResponse executeCode(ExecuteCodeRequest executeCodeRequest) {
         List<String> inputList = executeCodeRequest.getInputList();
-        String language = executeCodeRequest.getLanguage();
         String code = executeCodeRequest.getCode();
-
         String userDir = System.getProperty("user.dir");
         // 使用 File.separator 兼容不同系统的目录斜杠线
         String globalCodePathName = userDir + File.separator + GLOBAL_CODE_DIR_NAME;
@@ -60,6 +60,16 @@ public class JavaNativeCodeSandbox implements CodeSandbox {
             String runCmd = String.format("java -Dfile.encoding=UTF-8 -cp %s Main %s", userCodeParentPath, inputArgs);
             try {
                 Process runProcess = Runtime.getRuntime().exec(runCmd);
+                // 超时控制
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(TIME_OUT);
+                        System.out.println("超时，终止进程");
+                        runProcess.destroy();
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).start();
                 ExecuteMessage executeMessage = ProcessUtils.runProcessAndGetMessage(runProcess, "运行");
                 executeMessageList.add(executeMessage);
 //                ExecuteMessage executeMessage = ProcessUtils.runInteractProcessAndGetMessage(runProcess, "运行", inputArgs);
