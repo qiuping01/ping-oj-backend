@@ -3,12 +3,14 @@ package com.ping.ojcodesandbox;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.resource.ResourceUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.dfa.FoundWord;
+import cn.hutool.dfa.WordTree;
 import com.ping.ojcodesandbox.model.ExecuteCodeRequest;
 import com.ping.ojcodesandbox.model.ExecuteCodeResponse;
 import com.ping.ojcodesandbox.model.ExecuteMessage;
 import com.ping.ojcodesandbox.model.JudgeInfo;
 import com.ping.ojcodesandbox.utils.ProcessUtils;
-import org.springframework.util.StopWatch;
+
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -28,10 +30,29 @@ public class JavaNativeCodeSandbox implements CodeSandbox {
 
     private static final long TIME_OUT = 10000L;
 
+    // 黑名单过滤危险命令
+    private static final List<String> blackList = Arrays.asList("Files", "exec");
+
+    private static final WordTree WORD_TREE;
+
+    static {
+        // 初始化字典树
+        WORD_TREE = new WordTree();
+        WORD_TREE.addWords(blackList);
+    }
+
     @Override
     public ExecuteCodeResponse executeCode(ExecuteCodeRequest executeCodeRequest) {
         List<String> inputList = executeCodeRequest.getInputList();
         String code = executeCodeRequest.getCode();
+        // 校验用户代码中是否包含黑名单中的危险命令
+        FoundWord foundWord = WORD_TREE.matchWord(code);
+        if (foundWord != null) {
+            System.out.println("用户代码中包含危险命令：" + foundWord.getFoundWord());
+            return new ExecuteCodeResponse(null,
+                    "用户代码中包含危险命令：" + foundWord.getFoundWord(), 3, null);
+        }
+        // 1. 把用户的代码保存为文件
         String userDir = System.getProperty("user.dir");
         // 使用 File.separator 兼容不同系统的目录斜杠线
         String globalCodePathName = userDir + File.separator + GLOBAL_CODE_DIR_NAME;
@@ -39,7 +60,6 @@ public class JavaNativeCodeSandbox implements CodeSandbox {
         if (!FileUtil.exist(globalCodePathName)) {
             FileUtil.mkdir(globalCodePathName);
         }
-        // 1. 把用户的代码保存为文件
         // 每个用户的提交代码需要隔离存放在不同的文件夹中
         String userCodeParentPath = globalCodePathName + File.separator + UUID.randomUUID();
         // 存入代码文件
@@ -110,7 +130,7 @@ public class JavaNativeCodeSandbox implements CodeSandbox {
         judgeInfo.setTime(MaxTime);
         executeCodeResponse.setJudgeInfo(judgeInfo);
         // 5. 文件清理，释放空间
-        if(userCodeFile.getParentFile() != null) {
+        if (userCodeFile.getParentFile() != null) {
             boolean del = FileUtil.del(userCodeFile.getParentFile());
             System.out.println("删除文件结果：" + (del ? "成功" : "失败"));
         }
