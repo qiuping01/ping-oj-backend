@@ -1,6 +1,7 @@
 package com.ping.ojcodesandbox.utils;
 
 import com.ping.ojcodesandbox.model.ExecuteMessage;
+import org.springframework.util.StopWatch;
 
 import java.io.*;
 
@@ -19,6 +20,8 @@ public class ProcessUtils {
     public static ExecuteMessage runProcessAndGetMessage(Process runProcess, String opName) {
         ExecuteMessage executeMessage = new ExecuteMessage();
         try {
+            StopWatch stopWatch = new StopWatch();
+            stopWatch.start();
             // 等待程序执行，获取错误码
             int exitValue = runProcess.waitFor();
             executeMessage.setExitValue(exitValue);
@@ -61,6 +64,8 @@ public class ProcessUtils {
                 System.out.println(errorCompileOutputStringBuilder);
                 executeMessage.setErrorMessage(errorCompileOutputStringBuilder.toString());
             }
+            stopWatch.stop();
+            executeMessage.setTime(stopWatch.getLastTaskTimeMillis());
         } catch (Exception e) {
             e.printStackTrace();
         }

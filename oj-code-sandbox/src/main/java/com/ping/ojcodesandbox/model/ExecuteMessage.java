@@ -22,4 +22,9 @@ public class ExecuteMessage {
      * 进程执行错误
      */
     private String errorMessage;
+
+    /**
+     * 执行用时
+     */
+    private Long time;
 }
