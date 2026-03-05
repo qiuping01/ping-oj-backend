@@ -22,13 +22,14 @@ public class ProcessUtils {
             // 等待程序执行，获取错误码
             int exitValue = runProcess.waitFor();
             executeMessage.setExitValue(exitValue);
+            // 创建StringBuilder对象用于高效拼接和构建输出字符串
+            StringBuilder compileOutputStringBuilder = new StringBuilder();
             // 正常退出
             if (exitValue == 0) {
                 System.out.println(opName + "成功");
                 // 创建输入流的读取器，包装输入流，成块分批的去输出
                 // 分批获取进程的正常输出
                 BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(runProcess.getInputStream()));
-                StringBuilder compileOutputStringBuilder = new StringBuilder();
                 // 逐行读取
                 String compileOutputLine;
                 while ((compileOutputLine = bufferedReader.readLine()) != null) {
@@ -42,7 +43,6 @@ public class ProcessUtils {
                 System.out.println(opName + "失败,错误码：" + exitValue);
                 // 分批获取进程的正常输出
                 BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(runProcess.getInputStream()));
-                StringBuilder compileOutputStringBuilder = new StringBuilder();
                 // 逐行读取
                 String compileOutputLine;
                 while ((compileOutputLine = bufferedReader.readLine()) != null) {
