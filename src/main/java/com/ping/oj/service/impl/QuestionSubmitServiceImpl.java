@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ping.oj.common.ErrorCode;
 import com.ping.oj.constant.CommonConstant;
 import com.ping.oj.exception.BusinessException;
+import com.ping.oj.judge.JudgeService;
 import com.ping.oj.mapper.QuestionSubmitMapper;
 import com.ping.oj.model.dto.questionsubmit.QuestionSubmitAddRequest;
 import com.ping.oj.model.dto.questionsubmit.QuestionSubmitQueryRequest;
@@ -21,11 +22,13 @@ import com.ping.oj.service.UserService;
 import com.ping.oj.utils.SqlUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import javax.annotation.Resource;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -40,6 +43,10 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
 
     @Resource
     private QuestionService questionService;
+
+    @Resource
+    @Lazy
+    private JudgeService judgeService;
 
     /**
      * 执行题目提交
@@ -76,8 +83,14 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         if (!result) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "题目提交失败");
         }
+        // todo 执行判题服务
+        // 异步执行判题服务
+        Long questionSubmitId = questionSubmit.getId();
+        CompletableFuture.runAsync(() -> {
+            judgeService.doJudge(questionSubmitId);
+        });
         // 5. 返回提交结果
-        return questionSubmit.getId();
+        return questionSubmitId;
     }
 
     /**
