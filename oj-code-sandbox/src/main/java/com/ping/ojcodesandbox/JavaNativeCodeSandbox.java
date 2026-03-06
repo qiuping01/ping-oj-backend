@@ -9,8 +9,9 @@ import com.ping.ojcodesandbox.model.ExecuteCodeRequest;
 import com.ping.ojcodesandbox.model.ExecuteCodeResponse;
 import com.ping.ojcodesandbox.model.ExecuteMessage;
 import com.ping.ojcodesandbox.model.JudgeInfo;
+import com.ping.ojcodesandbox.security.DefaultSecurityManager;
+import com.ping.ojcodesandbox.security.DenySecurityManager;
 import com.ping.ojcodesandbox.utils.ProcessUtils;
-
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -29,6 +30,10 @@ public class JavaNativeCodeSandbox implements CodeSandbox {
     private static final String GLOBAL_JAVA_CLASS_NAME = "Main.java";
 
     private static final long TIME_OUT = 10000L;
+
+    private static final String SECURITY_MANAGER_PATH = "D:\\code_space\\project_study\\oj-backend\\oj-code-sandbox\\src\\main\\resources\\security";
+
+    private static final String SECURITY_MANAGER_CLASS_NAME = "MySecurityManager";
 
     // 黑名单过滤危险命令
     private static final List<String> blackList = Arrays.asList("Files", "exec");
@@ -78,6 +83,7 @@ public class JavaNativeCodeSandbox implements CodeSandbox {
         List<ExecuteMessage> executeMessageList = new ArrayList<>();
         for (String inputArgs : inputList) {
             String runCmd = String.format("java -Xmx256m -Dfile.encoding=UTF-8 -cp %s Main %s", userCodeParentPath, inputArgs);
+//            String runCmd = String.format("java -Dfile.encoding=UTF-8 -cp %s;%s -Djava.security.manager=%s Main %s", userCodeParentPath, SECURITY_MANAGER_PATH, SECURITY_MANAGER_CLASS_NAME, inputArgs);
             try {
                 Process runProcess = Runtime.getRuntime().exec(runCmd);
                 // 超时控制
@@ -156,6 +162,7 @@ public class JavaNativeCodeSandbox implements CodeSandbox {
         executeCodeRequest.setInputList(Arrays.asList("1 2", "1 3"));
         executeCodeRequest.setLanguage("java");
         String code = ResourceUtil.readStr("testCode/simpleComputeArgs/Main.java", StandardCharsets.UTF_8);
+//        String code = ResourceUtil.readStr("testCode/unsafeCode/Main.java", StandardCharsets.UTF_8);
 //        String code = ResourceUtil.readStr("testCodeScanner/Main.java", StandardCharsets.UTF_8);
         executeCodeRequest.setCode(code);
         ExecuteCodeResponse executeCodeResponse = javaNativeCodeSandbox.executeCode(executeCodeRequest);
