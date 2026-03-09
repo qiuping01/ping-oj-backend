@@ -152,7 +152,7 @@ public class JavaNativeCodeSandbox implements CodeSandbox {
     private ExecuteCodeResponse getErrorResponse(Throwable e) {
         ExecuteCodeResponse executeCodeResponse = new ExecuteCodeResponse();
         executeCodeResponse.setMessage(e.getMessage());
-        executeCodeResponse.setStatus(2);
+        executeCodeResponse.setStatus(3);
         return executeCodeResponse;
     }
 

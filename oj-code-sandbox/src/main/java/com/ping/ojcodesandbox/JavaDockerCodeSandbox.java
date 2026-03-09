@@ -47,6 +47,7 @@ public class JavaDockerCodeSandbox implements CodeSandbox {
     public ExecuteCodeResponse executeCode(ExecuteCodeRequest executeCodeRequest) {
         List<String> inputList = executeCodeRequest.getInputList();
         String code = executeCodeRequest.getCode();
+
         // 校验用户代码中是否包含黑名单中的危险命令
         // 1. 把用户的代码保存为文件
         String userDir = System.getProperty("user.dir");
@@ -61,6 +62,8 @@ public class JavaDockerCodeSandbox implements CodeSandbox {
         // 存入代码文件
         String userCodePath = userCodeParentPath + File.separator + GLOBAL_JAVA_CLASS_NAME;
         File userCodeFile = FileUtil.writeString(code, userCodePath, StandardCharsets.UTF_8);
+
+
         // 2. 编译代码，得到 class 文件
         String compileCmd = String.format("javac -encoding utf-8 %s", userCodeFile.getAbsolutePath());
         try {
@@ -277,7 +280,7 @@ public class JavaDockerCodeSandbox implements CodeSandbox {
     private ExecuteCodeResponse getErrorResponse(Throwable e) {
         ExecuteCodeResponse executeCodeResponse = new ExecuteCodeResponse();
         executeCodeResponse.setMessage(e.getMessage());
-        executeCodeResponse.setStatus(2);
+        executeCodeResponse.setStatus(3);
         return executeCodeResponse;
     }
 
@@ -290,7 +293,7 @@ public class JavaDockerCodeSandbox implements CodeSandbox {
     private ExecuteCodeResponse getErrorResponse(String errorMessage) {
         ExecuteCodeResponse executeCodeResponse = new ExecuteCodeResponse();
         executeCodeResponse.setMessage(errorMessage);
-        executeCodeResponse.setStatus(2);
+        executeCodeResponse.setStatus(3);
         return executeCodeResponse;
     }
 
