@@ -39,17 +39,40 @@ public abstract class JavaCodeSandboxTemplate implements CodeSandbox {
 
     @Override
     public ExecuteCodeResponse executeCode(ExecuteCodeRequest executeCodeRequest) {
-        // 创建上下文对象，贯穿整个流程
         List<String> inputList = executeCodeRequest.getInputList();
         String code = executeCodeRequest.getCode();
-        // 校验用户代码中是否包含黑名单中的危险命令
+
+        // 1. 校验用户代码中是否包含黑名单中的危险命令
+        checkUnsafeCommand(code);
+
+        // 2. 把用户的代码保存为文件
+        File userCodeFile = saveCodeToFile(code);
+
+        // 3. 编译代码，得到 class 文件
+        compileFile(userCodeFile);
+
+        // 4. 执行代码，得到输出结果 - 子类可修改实现
+        List<ExecuteMessage> executeMessageList = runFile(inputList, userCodeFile);
+
+        // 5. 收集整理输出结果
+        ExecuteCodeResponse executeCodeResponse = getOutputResponse(executeMessageList);
+
+        // 6. 文件清理，释放空间 - 子类可修改实现
+        cleanFile(userCodeFile);
+        return executeCodeResponse;
+    }
+
+    // 1. 校验用户代码中是否包含黑名单中的危险命令
+    protected void checkUnsafeCommand(String code) {
         FoundWord foundWord = WORD_TREE.matchWord(code);
         if (foundWord != null) {
             System.out.println("用户代码中包含危险命令：" + foundWord.getFoundWord());
-            return new ExecuteCodeResponse(null,
-                    "用户代码中包含危险命令：" + foundWord.getFoundWord(), 3, null);
+            throw new BusinessException("用户代码中包含危险命令：" + foundWord.getFoundWord());
         }
-        // 1. 把用户的代码保存为文件
+    }
+
+    // 2. 把用户的代码保存为文件
+    protected File saveCodeToFile(String code) {
         String userDir = System.getProperty("user.dir");
         // 使用 File.separator 兼容不同系统的目录斜杠线
         String globalCodePathName = userDir + File.separator + GLOBAL_CODE_DIR_NAME;
@@ -62,21 +85,63 @@ public abstract class JavaCodeSandboxTemplate implements CodeSandbox {
         // 存入代码文件
         String userCodePath = userCodeParentPath + File.separator + GLOBAL_JAVA_CLASS_NAME;
         File userCodeFile = FileUtil.writeString(code, userCodePath, StandardCharsets.UTF_8);
+        return userCodeFile;
+    }
 
-        // 2. 编译代码，得到 class 文件
+    // 3. 编译代码，得到 class 文件
+    protected void compileFile(File userCodeFile) {
         String compileCmd = String.format("javac -encoding utf-8 %s", userCodeFile.getAbsolutePath());
         try {
             Process compileProcess = Runtime.getRuntime().exec(compileCmd);
             ExecuteMessage executeMessage = ProcessUtils.runProcessAndGetMessage(compileProcess, "编译");
             System.out.println(executeMessage);
+            // 检查编译是否成功
+            if (StrUtil.isNotBlank(executeMessage.getErrorMessage())) {
+                throw new BusinessException("编译错误：" + executeMessage.getErrorMessage());
+            }
         } catch (Exception e) {
             throw new BusinessException("编译失败", e);
         }
+    }
 
-        // 3. 执行代码，得到输出结果 - 子类可修改实现
-        List<ExecuteMessage> executeMessageList = runFile(inputList, userCodeParentPath);
 
-        // 4. 收集整理输出结果
+    /**
+     * 4. 执行代码，得到输出结果
+     *
+     * @param inputList 输入用例
+     * @return 执行结果列表
+     */
+    protected List<ExecuteMessage> runFile(List<String> inputList, File userCodeFile) {
+        String userCodeParentPath = userCodeFile.getParentFile().getAbsolutePath();
+        List<ExecuteMessage> executeMessageList = new ArrayList<>();
+        for (String inputArgs : inputList) {
+            String runCmd = String.format("java -Xmx256m -Dfile.encoding=UTF-8 -cp %s Main %s", userCodeParentPath, inputArgs);
+//            String runCmd = String.format("java -Dfile.encoding=UTF-8 -cp %s;%s -Djava.security.manager=%s Main %s", userCodeParentPath, SECURITY_MANAGER_PATH, SECURITY_MANAGER_CLASS_NAME, inputArgs);
+            try {
+                Process runProcess = Runtime.getRuntime().exec(runCmd);
+                // 超时控制
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(TIME_OUT);
+                        System.out.println("超时，终止进程");
+                        runProcess.destroy();
+                    } catch (InterruptedException e) {
+                        throw new BusinessException("超时终止进程失败", e);
+                    }
+                }).start();
+                ExecuteMessage executeMessage = ProcessUtils.runProcessAndGetMessage(runProcess, "运行");
+                executeMessageList.add(executeMessage);
+//                ExecuteMessage executeMessage = ProcessUtils.runInteractProcessAndGetMessage(runProcess, "运行", inputArgs);
+                System.out.println(executeMessage);
+            } catch (Exception e) {
+                throw new BusinessException("执行运行失败", e);
+            }
+        }
+        return executeMessageList;
+    }
+
+    // 5. 收集整理输出结果
+    protected ExecuteCodeResponse getOutputResponse(List<ExecuteMessage> executeMessageList) {
         ExecuteCodeResponse executeCodeResponse = new ExecuteCodeResponse();
         List<String> outputList = new ArrayList<>();
         // 取用时最大值，便于判断是否超时
@@ -108,48 +173,10 @@ public abstract class JavaCodeSandboxTemplate implements CodeSandbox {
 //        judgeInfo.setMemory(); // 需要调用第三方库实现，较复杂，暂不实现
         judgeInfo.setTime(MaxTime);
         executeCodeResponse.setJudgeInfo(judgeInfo);
-
-        // 5. 文件清理，释放空间 - 子类可修改实现
-        cleanFile(userCodeFile);
         return executeCodeResponse;
     }
 
-    /**
-     * 3. 执行代码，得到输出结果
-     *
-     * @param inputList          输入用例
-     * @param userCodeParentPath 输出用例
-     * @return 执行结果列表
-     */
-    protected List<ExecuteMessage> runFile(List<String> inputList, String userCodeParentPath) {
-        List<ExecuteMessage> executeMessageList = new ArrayList<>();
-        for (String inputArgs : inputList) {
-            String runCmd = String.format("java -Xmx256m -Dfile.encoding=UTF-8 -cp %s Main %s", userCodeParentPath, inputArgs);
-//            String runCmd = String.format("java -Dfile.encoding=UTF-8 -cp %s;%s -Djava.security.manager=%s Main %s", userCodeParentPath, SECURITY_MANAGER_PATH, SECURITY_MANAGER_CLASS_NAME, inputArgs);
-            try {
-                Process runProcess = Runtime.getRuntime().exec(runCmd);
-                // 超时控制
-                new Thread(() -> {
-                    try {
-                        Thread.sleep(TIME_OUT);
-                        System.out.println("超时，终止进程");
-                        runProcess.destroy();
-                    } catch (InterruptedException e) {
-                        throw new BusinessException("超时终止进程失败", e);
-                    }
-                }).start();
-                ExecuteMessage executeMessage = ProcessUtils.runProcessAndGetMessage(runProcess, "运行");
-                executeMessageList.add(executeMessage);
-//                ExecuteMessage executeMessage = ProcessUtils.runInteractProcessAndGetMessage(runProcess, "运行", inputArgs);
-                System.out.println(executeMessage);
-            } catch (Exception e) {
-                throw new BusinessException("执行运行失败", e);
-            }
-        }
-        return executeMessageList;
-    }
-
-    // 5. 文件清理，释放空间
+    // 6. 文件清理，释放空间
     protected void cleanFile(File userCodeFile) {
         if (userCodeFile.getParentFile() != null) {
             boolean del = FileUtil.del(userCodeFile.getParentFile());

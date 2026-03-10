@@ -1,6 +1,5 @@
 package com.ping.ojcodesandbox;
 
-import cn.hutool.core.io.resource.ResourceUtil;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.StrUtil;
 import com.github.dockerjava.api.DockerClient;
@@ -9,15 +8,12 @@ import com.github.dockerjava.api.command.*;
 import com.github.dockerjava.api.model.*;
 import com.github.dockerjava.core.DockerClientBuilder;
 import com.ping.ojcodesandbox.exception.BusinessException;
-import com.ping.ojcodesandbox.model.ExecuteCodeRequest;
-import com.ping.ojcodesandbox.model.ExecuteCodeResponse;
 import com.ping.ojcodesandbox.model.ExecuteMessage;
 import org.springframework.util.StopWatch;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -65,7 +61,8 @@ public class JavaDockerCodeSandbox extends JavaCodeSandboxTemplate {
     }
 
     @Override
-    protected List<ExecuteMessage> runFile(List<String> inputList, String userCodeParentPath) {
+    protected List<ExecuteMessage> runFile(List<String> inputList, File userCodeFile) {
+        String userCodeParentPath = userCodeFile.getParentFile().getAbsolutePath();
         // 3. 创建容器，把文件复制到容器内 - 执行代码，得到输出结果
         // 拉取镜像
         String image = "openjdk:8-alpine";
@@ -208,6 +205,4 @@ public class JavaDockerCodeSandbox extends JavaCodeSandboxTemplate {
         }
         return executeMessageList;
     }
-
-
 }
