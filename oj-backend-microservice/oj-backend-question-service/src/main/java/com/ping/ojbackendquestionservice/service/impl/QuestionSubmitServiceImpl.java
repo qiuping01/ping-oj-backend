@@ -18,8 +18,8 @@ import com.ping.ojbackendmodel.model.vo.QuestionSubmitVO;
 import com.ping.ojbackendquestionservice.mapper.QuestionSubmitMapper;
 import com.ping.ojbackendquestionservice.service.QuestionService;
 import com.ping.ojbackendquestionservice.service.QuestionSubmitService;
-import com.ping.ojbackendserviceclient.service.JudgeService;
-import com.ping.ojbackendserviceclient.service.UserService;
+import com.ping.ojbackendserviceclient.service.JudgeFeignClient;
+import com.ping.ojbackendserviceclient.service.UserFeignClient;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Lazy;
@@ -39,14 +39,14 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         implements QuestionSubmitService {
 
     @Resource
-    private UserService userService;
+    private UserFeignClient userFeignClient;
 
     @Resource
     private QuestionService questionService;
 
     @Resource
     @Lazy
-    private JudgeService judgeService;
+    private JudgeFeignClient judgeFeignClient;
 
     /**
      * 执行题目提交
@@ -87,7 +87,7 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         // 异步执行判题服务
         Long questionSubmitId = questionSubmit.getId();
         CompletableFuture.runAsync(() -> {
-            judgeService.doJudge(questionSubmitId);
+            judgeFeignClient.doJudge(questionSubmitId);
         });
         // 5. 返回提交结果
         return questionSubmitId;
@@ -135,7 +135,7 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         QuestionSubmitVO questionSubmitVO = QuestionSubmitVO.objToVo(questionSubmit);
         Long userId = loginUser.getId();
         // 脱敏：仅本人和管理员能看见自己（提交 userId 和登录用户 id 不同）提交的代码
-        if (!userId.equals(questionSubmit.getUserId()) && !userService.isAdmin(loginUser)) {
+        if (!userId.equals(questionSubmit.getUserId()) && !userFeignClient.isAdmin(loginUser)) {
             questionSubmitVO.setCode(null);
         }
         return questionSubmitVO;
