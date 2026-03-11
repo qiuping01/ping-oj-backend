@@ -20,7 +20,7 @@ import com.ping.ojbackendmodel.model.vo.QuestionSubmitVO;
 import com.ping.ojbackendmodel.model.vo.QuestionVO;
 import com.ping.ojbackendquestionservice.service.QuestionService;
 import com.ping.ojbackendquestionservice.service.QuestionSubmitService;
-import com.ping.ojbackendserviceclient.service.UserService;
+import com.ping.ojbackendserviceclient.service.UserFeignClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
@@ -33,7 +33,7 @@ import java.util.List;
  * 题目接口
  **/
 @RestController
-@RequestMapping("/question")
+@RequestMapping("/")
 @Slf4j
 public class QuestionController {
 
@@ -44,7 +44,7 @@ public class QuestionController {
     private QuestionSubmitService questionSubmitService;
 
     @Resource
-    private UserService userService;
+    private UserFeignClient userService;
 
     // region 增删改查
 
