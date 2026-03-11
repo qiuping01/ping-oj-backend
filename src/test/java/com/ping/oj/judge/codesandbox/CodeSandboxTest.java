@@ -40,7 +40,6 @@ class CodeSandboxTest {
         CodeSandbox codeSandbox = CodeSandboxFactory.newInstance(type);
         CodeSandboxProxy codeSandboxProxy = new CodeSandboxProxy(codeSandbox);
         String code = "public class Main {\n" +
-                "\n" +
                 "    public static void main(String[] args) {\n" +
                 "        int a = Integer.parseInt(args[0]);\n" +
                 "        int b = Integer.parseInt(args[1]);\n" +
