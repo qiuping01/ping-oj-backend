@@ -4,6 +4,7 @@ import com.ping.ojbackendmodel.model.entity.User;
 import com.ping.ojbackendserviceclient.service.UserFeignClient;
 import com.ping.ojbackenduserservice.service.UserService;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -14,7 +15,8 @@ import java.util.List;
 /**
  * 该服务仅内部调用，前端不可调用
  */
-@RestController("/inner")
+@RestController
+@RequestMapping("/inner")
 public class UserInnerController implements UserFeignClient {
 
     @Resource

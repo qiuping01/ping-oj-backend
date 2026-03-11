@@ -4,6 +4,7 @@ import com.ping.ojbackendjudgeservice.judge.JudgeService;
 import com.ping.ojbackendmodel.model.entity.QuestionSubmit;
 import com.ping.ojbackendserviceclient.service.JudgeFeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -12,7 +13,8 @@ import javax.annotation.Resource;
 /**
  * 仅内部调用，前端不可调用
  */
-@RestController("/inner")
+@RestController
+@RequestMapping("/inner")
 public class JudgeInnerController implements JudgeFeignClient {
 
     @Resource
