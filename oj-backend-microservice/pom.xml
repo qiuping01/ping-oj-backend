@@ -5,8 +5,18 @@
     <groupId>com.ping</groupId>
     <artifactId>oj-backend-microservice</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
     <name>oj-backend-microservice</name>
     <description>OJ 项目</description>
+    <modules>
+        <module>oj-backend-common</module>
+        <module>oj-backend-model</module>
+        <module>oj-backend-service-client</module>
+        <module>oj-backend-gateway</module>
+        <module>oj-backend-judge-service</module>
+        <module>oj-backend-question-service</module>
+        <module>oj-backend-user-service</module>
+    </modules>
     <properties>
         <java.version>1.8</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
