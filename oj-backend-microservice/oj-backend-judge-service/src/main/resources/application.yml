@@ -30,12 +30,15 @@ spring:
     port: 6379
     timeout: 5000
   #    password: 123456
-
   # 文件上传
   servlet:
     multipart:
       # 大小限制
       max-file-size: 10MB
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
 server:
   address: 0.0.0.0
   port: 8104
