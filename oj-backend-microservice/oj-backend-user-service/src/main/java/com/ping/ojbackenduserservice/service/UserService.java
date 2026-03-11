@@ -1,4 +1,4 @@
-package com.ping.ojbackendserviceclient.service;
+package com.ping.ojbackenduserservice.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -105,5 +105,4 @@ public interface UserService extends IService<User> {
      * @return
      */
     QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest);
-
 }
