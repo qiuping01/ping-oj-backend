@@ -1,4 +1,4 @@
-package com.ping.ojbackendjudgeservice;
+package com.ping.ojbackendjudgeservice.rabbitmq;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
