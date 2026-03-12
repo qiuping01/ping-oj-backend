@@ -39,7 +39,7 @@ public class MyMessageConsumer {
             channel.basicAck(deliveryTag, false);
         } catch (IOException e) {
             // 执行失败
-            channel.basicNack(deliveryTag, false, true);
+            channel.basicNack(deliveryTag, false, false);
         }
     }
 }
