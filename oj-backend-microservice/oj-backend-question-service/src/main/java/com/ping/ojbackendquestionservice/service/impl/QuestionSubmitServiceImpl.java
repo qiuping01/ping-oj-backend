@@ -16,6 +16,7 @@ import com.ping.ojbackendmodel.model.enums.QuestionSubmitLanguageEnum;
 import com.ping.ojbackendmodel.model.enums.QuestionSubmitStatusEnum;
 import com.ping.ojbackendmodel.model.vo.QuestionSubmitVO;
 import com.ping.ojbackendquestionservice.mapper.QuestionSubmitMapper;
+import com.ping.ojbackendquestionservice.rabbitmq.MyMessageProducer;
 import com.ping.ojbackendquestionservice.service.QuestionService;
 import com.ping.ojbackendquestionservice.service.QuestionSubmitService;
 import com.ping.ojbackendserviceclient.service.JudgeFeignClient;
@@ -47,6 +48,9 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
     @Resource
     @Lazy
     private JudgeFeignClient judgeFeignClient;
+
+    @Resource
+    private MyMessageProducer myMessageProducer;
 
     /**
      * 执行题目提交
@@ -84,11 +88,14 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "题目提交失败");
         }
         // todo 执行判题服务
-        // 异步执行判题服务
         Long questionSubmitId = questionSubmit.getId();
-        CompletableFuture.runAsync(() -> {
-            judgeFeignClient.doJudge(questionSubmitId);
-        });
+        // 发送消息到消息队列
+        myMessageProducer.sendMessage("code_exchange", "my_routingKey",
+                String.valueOf(questionSubmitId));
+        // 异步执行判题服务
+//        CompletableFuture.runAsync(() -> {
+//            judgeFeignClient.doJudge(questionSubmitId);
+//        });
         // 5. 返回提交结果
         return questionSubmitId;
     }
