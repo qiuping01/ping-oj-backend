@@ -54,7 +54,7 @@ public class JavaNativeCodeSandboxOld implements CodeSandbox {
         if (foundWord != null) {
             System.out.println("用户代码中包含危险命令：" + foundWord.getFoundWord());
             return new ExecuteCodeResponse(null,
-                    "用户代码中包含危险命令：" + foundWord.getFoundWord(), 3, null);
+                    "用户代码中包含危险命令：" + foundWord.getFoundWord(), null, 3, null);
         }
         // 1. 把用户的代码保存为文件
         String userDir = System.getProperty("user.dir");
@@ -76,7 +76,7 @@ public class JavaNativeCodeSandboxOld implements CodeSandbox {
             ExecuteMessage executeMessage = ProcessUtils.runProcessAndGetMessage(compileProcess, "编译");
             System.out.println(executeMessage);
         } catch (Exception e) {
-            throw new BusinessException("编译失败", e);
+            throw new BusinessException("编译失败", e, null);
         }
         // 3. 执行代码，得到输出结果
         List<ExecuteMessage> executeMessageList = new ArrayList<>();

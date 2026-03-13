@@ -5,10 +5,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.dfa.FoundWord;
 import cn.hutool.dfa.WordTree;
 import com.ping.ojcodesandbox.exception.BusinessException;
-import com.ping.ojcodesandbox.model.ExecuteCodeRequest;
-import com.ping.ojcodesandbox.model.ExecuteCodeResponse;
-import com.ping.ojcodesandbox.model.ExecuteMessage;
-import com.ping.ojcodesandbox.model.JudgeInfo;
+import com.ping.ojcodesandbox.model.*;
 import com.ping.ojcodesandbox.utils.ProcessUtils;
 
 import java.io.File;
@@ -67,7 +64,8 @@ public abstract class JavaCodeSandboxTemplate implements CodeSandbox {
         FoundWord foundWord = WORD_TREE.matchWord(code);
         if (foundWord != null) {
             System.out.println("用户代码中包含危险命令：" + foundWord.getFoundWord());
-            throw new BusinessException("用户代码中包含危险命令：" + foundWord.getFoundWord());
+            String dangerousOperationValue = JudgeInfoMessageEnum.DANGEROUS_OPERATION.getValue();
+            throw new BusinessException("用户代码中包含危险命令：" + foundWord.getFoundWord(), dangerousOperationValue);
         }
     }
 
@@ -91,16 +89,17 @@ public abstract class JavaCodeSandboxTemplate implements CodeSandbox {
     // 3. 编译代码，得到 class 文件
     protected void compileFile(File userCodeFile) {
         String compileCmd = String.format("javac -encoding utf-8 %s", userCodeFile.getAbsolutePath());
+        String compileErrorValue = JudgeInfoMessageEnum.COMPILE_ERROR.getValue();
         try {
             Process compileProcess = Runtime.getRuntime().exec(compileCmd);
             ExecuteMessage executeMessage = ProcessUtils.runProcessAndGetMessage(compileProcess, "编译");
             System.out.println(executeMessage);
             // 检查编译是否成功
             if (StrUtil.isNotBlank(executeMessage.getErrorMessage())) {
-                throw new BusinessException("编译错误：" + executeMessage.getErrorMessage());
+                throw new BusinessException("编译错误：" + executeMessage.getErrorMessage(), compileErrorValue);
             }
         } catch (Exception e) {
-            throw new BusinessException("编译失败", e);
+            throw new BusinessException("编译失败", e, compileErrorValue);
         }
     }
 
@@ -114,6 +113,9 @@ public abstract class JavaCodeSandboxTemplate implements CodeSandbox {
     protected List<ExecuteMessage> runFile(List<String> inputList, File userCodeFile) {
         String userCodeParentPath = userCodeFile.getParentFile().getAbsolutePath();
         List<ExecuteMessage> executeMessageList = new ArrayList<>();
+        String timeLimitExceededValue = JudgeInfoMessageEnum.TIME_LIMIT_EXCEEDED.getValue();
+        String runtimeErrorValue = JudgeInfoMessageEnum.RUNTIME_ERROR.getValue();
+        String presentationErrorValue = JudgeInfoMessageEnum.PRESENTATION_ERROR.getValue();
         for (String inputArgs : inputList) {
             String runCmd = String.format("java -Xmx256m -Dfile.encoding=UTF-8 -cp %s Main %s", userCodeParentPath, inputArgs);
 //            String runCmd = String.format("java -Dfile.encoding=UTF-8 -cp %s;%s -Djava.security.manager=%s Main %s", userCodeParentPath, SECURITY_MANAGER_PATH, SECURITY_MANAGER_CLASS_NAME, inputArgs);
@@ -125,17 +127,20 @@ public abstract class JavaCodeSandboxTemplate implements CodeSandbox {
                         Thread.sleep(TIME_OUT);
                         System.out.println("超时，终止进程");
                         runProcess.destroy();
-                        throw new BusinessException("超时终止进程");
+                        throw new BusinessException("超时终止进程", runtimeErrorValue);
                     } catch (InterruptedException e) {
-                        throw new BusinessException("超时终止进程失败", e);
+                        throw new BusinessException("超时终止进程失败", e, timeLimitExceededValue);
                     }
                 }).start();
                 ExecuteMessage executeMessage = ProcessUtils.runProcessAndGetMessage(runProcess, "运行");
                 executeMessageList.add(executeMessage);
 //                ExecuteMessage executeMessage = ProcessUtils.runInteractProcessAndGetMessage(runProcess, "运行", inputArgs);
                 System.out.println(executeMessage);
+                if (StrUtil.isNotBlank(executeMessage.getErrorMessage())) {
+                    throw new BusinessException("格式错误：" + executeMessage.getErrorMessage(), presentationErrorValue);
+                }
             } catch (Exception e) {
-                throw new BusinessException("执行运行失败", e);
+                throw new BusinessException("执行运行失败", e, runtimeErrorValue);
             }
         }
         return executeMessageList;
@@ -148,16 +153,16 @@ public abstract class JavaCodeSandboxTemplate implements CodeSandbox {
         // 取用时最大值，便于判断是否超时
         long MaxTime = 0;
         JudgeInfo judgeInfo = new JudgeInfo();
+        String systemErrorValue = JudgeInfoMessageEnum.SYSTEM_ERROR.getValue();
         for (ExecuteMessage executeMessage : executeMessageList) {
             if (StrUtil.isNotBlank(executeMessage.getErrorMessage())) {
                 executeCodeResponse.setMessage(executeMessage.getErrorMessage());
                 // 执行中存在错误
                 executeCodeResponse.setStatus(3);
-                judgeInfo.setMessage("执行中存在错误");
+                judgeInfo.setMessage(systemErrorValue);
                 break;
             }
             // 正常输出直接添加到结果列表
-            judgeInfo.setMessage("执行成功");
             outputList.add(executeMessage.getMessage());
             Long time = executeMessage.getTime();
             // 记录最大执行时间
@@ -168,7 +173,7 @@ public abstract class JavaCodeSandboxTemplate implements CodeSandbox {
         }
         // 正常运行完成
         if (outputList.size() == executeMessageList.size()) {
-            executeCodeResponse.setStatus(1);
+            executeCodeResponse.setStatus(2);
         }
         executeCodeResponse.setOutputList(outputList);
 //        judgeInfo.setMemory(); // 需要调用第三方库实现，较复杂，暂不实现

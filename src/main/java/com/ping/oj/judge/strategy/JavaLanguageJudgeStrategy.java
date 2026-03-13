@@ -18,20 +18,36 @@ public class JavaLanguageJudgeStrategy implements JudgeStrategy {
     public JudgeInfo doJudge(JudgeContext judgeContext) {
         // 获取判题参数
         JudgeInfo judgeInfo = judgeContext.getJudgeInfo();
-        Long memory = Optional.ofNullable(judgeInfo.getMemory()).orElse(0L);
-        Long time = Optional.ofNullable(judgeInfo.getTime()).orElse(0L);
+        Long memory = null;
+        Long time = null;
+        if (judgeInfo == null) {
+            judgeInfo = new JudgeInfo();
+            judgeInfo.setMemory(null);
+            judgeInfo.setTime(null);
+        } else {
+            memory = Optional.ofNullable(judgeInfo.getMemory()).orElse(0L);
+            time = Optional.ofNullable(judgeInfo.getTime()).orElse(0L);
+        }
         List<String> inputList = judgeContext.getInputList();
         List<String> outputList = judgeContext.getOutputList();
         Question question = judgeContext.getQuestion();
         List<JudgeCase> judgeCaseList = judgeContext.getJudgeCaseList();
+        String judgeInfoMessage = judgeContext.getJudgeInfoMessage();
         // 设置判题信息
         JudgeInfo judgeInfoResponse = new JudgeInfo();
+        // 如果 judgeInfoMessage 不为空，则赋值给 judgeInfoResponse
+        if (judgeInfoMessage != null) {
+            judgeInfoResponse.setMessage(judgeInfoMessage);
+            return judgeInfoResponse;
+        }
         JudgeInfoMessageEnum judgeInfoMessageEnum = JudgeInfoMessageEnum.WAITING;
         judgeInfoResponse.setMessage(judgeInfoMessageEnum.getValue());
         judgeInfoResponse.setMemory(memory);
         judgeInfoResponse.setTime(time);
         // 增加超时判断
-        if (time >= 10000) {
+        // Java 程序本身需要额外执行 10 秒钟
+        long JAVA_PROGRAM_TIME_COST = 10000L;
+        if (time >= JAVA_PROGRAM_TIME_COST) {
             judgeInfoMessageEnum = JudgeInfoMessageEnum.TIME_LIMIT_EXCEEDED;
             judgeInfoResponse.setMessage(judgeInfoMessageEnum.getValue());
             return judgeInfoResponse;
@@ -61,8 +77,6 @@ public class JavaLanguageJudgeStrategy implements JudgeStrategy {
             judgeInfoResponse.setMessage(judgeInfoMessageEnum.getValue());
             return judgeInfoResponse;
         }
-        // Java 程序本身需要额外执行 10 秒钟
-        long JAVA_PROGRAM_TIME_COST = 10000L;
         if ((time - JAVA_PROGRAM_TIME_COST) > needTimeLimit) {
             judgeInfoMessageEnum = JudgeInfoMessageEnum.TIME_LIMIT_EXCEEDED;
             judgeInfoResponse.setMessage(judgeInfoMessageEnum.getValue());

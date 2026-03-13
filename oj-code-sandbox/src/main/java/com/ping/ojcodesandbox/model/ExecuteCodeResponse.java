@@ -27,6 +27,11 @@ public class ExecuteCodeResponse {
     private String message;
 
     /**
+     * 程序错误信息
+     */
+    private String judgeInfoMessage;
+
+    /**
      * 执行状态
      */
     private Integer status;

@@ -9,6 +9,7 @@ import com.github.dockerjava.api.model.*;
 import com.github.dockerjava.core.DockerClientBuilder;
 import com.ping.ojcodesandbox.exception.BusinessException;
 import com.ping.ojcodesandbox.model.ExecuteMessage;
+import com.ping.ojcodesandbox.model.JudgeInfoMessageEnum;
 import org.springframework.util.StopWatch;
 
 import java.io.File;
@@ -66,6 +67,7 @@ public class JavaDockerCodeSandbox extends JavaCodeSandboxTemplate {
         // 3. 创建容器，把文件复制到容器内 - 执行代码，得到输出结果
         // 拉取镜像
         String image = "openjdk:8-alpine";
+        String systemErrorValue = JudgeInfoMessageEnum.SYSTEM_ERROR.getValue();
         if (FIRST_INIT) {
             PullImageCmd pullImageCmd = dockerClient.pullImageCmd(image);
             ResultCallback.Adapter<PullResponseItem> pullAdapter = new ResultCallback.Adapter<PullResponseItem>() {
@@ -83,7 +85,7 @@ public class JavaDockerCodeSandbox extends JavaCodeSandboxTemplate {
 
             } catch (InterruptedException e) {
                 System.out.println("拉取镜像异常");
-                throw new BusinessException("拉取镜像异常", e);
+                throw new BusinessException("拉取镜像异常", e, systemErrorValue);
             }
         }
         // 创建容器
@@ -111,6 +113,7 @@ public class JavaDockerCodeSandbox extends JavaCodeSandboxTemplate {
         // 4. 启动容器,执行代码
         dockerClient.startContainerCmd(containerId).exec();
         List<ExecuteMessage> executeMessageList = new ArrayList<>();
+        String runtimeErrorValue = JudgeInfoMessageEnum.RUNTIME_ERROR.getValue();
         // 创建执行命令
         // docker exec clever_neumann java -cp /app Main 1 99
         for (String inputArgs : inputList) {
@@ -128,7 +131,7 @@ public class JavaDockerCodeSandbox extends JavaCodeSandboxTemplate {
             final ExecuteMessage finalMsg = executeMessage;  // final 副本，供内部类使用
             String execId = execCreateCmdResponse.getId();
             if (execId == null) {
-                throw new BusinessException("创建执行命令失败：execId 为空");
+                throw new BusinessException("创建执行命令失败：execId 为空", runtimeErrorValue);
             }
             // 执行命令的回调（处理输出）
             long time = 0;
@@ -195,7 +198,7 @@ public class JavaDockerCodeSandbox extends JavaCodeSandboxTemplate {
                 statsLatch.await(1, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
                 System.out.println("程序执行命令异常");
-                throw new BusinessException("程序执行命令异常", e);
+                throw new BusinessException("程序执行命令异常", e, runtimeErrorValue);
             } finally {
                 // 关闭统计流，释放资源
                 statsCmd.close();

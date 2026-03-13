@@ -43,4 +43,9 @@ public class JudgeContext {
      * 题目提交
      */
     private QuestionSubmit questionSubmit;
+
+    /**
+     * 程序错误信息
+     */
+    private String judgeInfoMessage;
 }

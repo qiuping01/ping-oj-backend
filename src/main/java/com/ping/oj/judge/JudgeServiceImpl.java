@@ -103,6 +103,7 @@ public class JudgeServiceImpl implements JudgeService {
         judgeContext.setJudgeCaseList(judgeCaseList);
         judgeContext.setQuestion(question);
         judgeContext.setQuestionSubmit(questionSubmit);
+        judgeContext.setJudgeInfoMessage(executeCodeResponse.getJudgeInfoMessage());
 
         // 使用默认判题策略
         JudgeInfo judgeInfoResponse = judgeManager.doJudge(judgeContext);
