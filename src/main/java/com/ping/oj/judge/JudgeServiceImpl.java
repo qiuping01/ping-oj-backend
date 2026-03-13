@@ -15,6 +15,7 @@ import com.ping.oj.model.dto.question.JudgeCase;
 import com.ping.oj.model.dto.questionsubmit.JudgeInfo;
 import com.ping.oj.model.entity.Question;
 import com.ping.oj.model.entity.QuestionSubmit;
+import com.ping.oj.model.enums.JudgeInfoMessageEnum;
 import com.ping.oj.model.enums.QuestionSubmitStatusEnum;
 import com.ping.oj.service.QuestionService;
 import com.ping.oj.service.QuestionSubmitService;
@@ -39,7 +40,7 @@ public class JudgeServiceImpl implements JudgeService {
 
     @Value("${codesandbox.type:example}")
     private String type;
-    
+
     @Resource
     private JudgeManager judgeManager;
 
@@ -102,12 +103,18 @@ public class JudgeServiceImpl implements JudgeService {
         judgeContext.setJudgeCaseList(judgeCaseList);
         judgeContext.setQuestion(question);
         judgeContext.setQuestionSubmit(questionSubmit);
+
         // 使用默认判题策略
         JudgeInfo judgeInfoResponse = judgeManager.doJudge(judgeContext);
         // 4. 更新数据库中题目的判题状态和信息
         questionSubmitUpdate = new QuestionSubmit();
         questionSubmitUpdate.setId(questionSubmitId);
-        questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.SUCCEED.getValue());
+        String acceptedValue = JudgeInfoMessageEnum.ACCEPTED.getValue();
+        if (!judgeInfoResponse.getMessage().equals(acceptedValue)) {
+            questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.FAILED.getValue());
+        } else {
+            questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.SUCCEED.getValue());
+        }
         questionSubmitUpdate.setJudgeInfo(JSONUtil.toJsonStr(judgeInfoResponse));
         result = questionSubmitService.updateById(questionSubmitUpdate);
         if (!result) {

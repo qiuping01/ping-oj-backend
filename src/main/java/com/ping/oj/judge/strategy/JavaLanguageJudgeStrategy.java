@@ -30,6 +30,12 @@ public class JavaLanguageJudgeStrategy implements JudgeStrategy {
         judgeInfoResponse.setMessage(judgeInfoMessageEnum.getValue());
         judgeInfoResponse.setMemory(memory);
         judgeInfoResponse.setTime(time);
+        // 增加超时判断
+        if (time >= 10000) {
+            judgeInfoMessageEnum = JudgeInfoMessageEnum.TIME_LIMIT_EXCEEDED;
+            judgeInfoResponse.setMessage(judgeInfoMessageEnum.getValue());
+            return judgeInfoResponse;
+        }
         // 先判断沙箱执行的结果输出数量是否和预期数量相等
         if (outputList.size() != inputList.size()) {
             judgeInfoMessageEnum = JudgeInfoMessageEnum.WRONG_ANSWER;

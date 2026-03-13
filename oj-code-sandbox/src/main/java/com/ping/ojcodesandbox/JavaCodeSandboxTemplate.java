@@ -125,6 +125,7 @@ public abstract class JavaCodeSandboxTemplate implements CodeSandbox {
                         Thread.sleep(TIME_OUT);
                         System.out.println("超时，终止进程");
                         runProcess.destroy();
+                        throw new BusinessException("超时终止进程");
                     } catch (InterruptedException e) {
                         throw new BusinessException("超时终止进程失败", e);
                     }
