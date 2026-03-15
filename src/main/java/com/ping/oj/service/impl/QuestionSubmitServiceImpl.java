@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ping.oj.common.ErrorCode;
 import com.ping.oj.constant.CommonConstant;
+import com.ping.oj.constant.UserConstant;
 import com.ping.oj.exception.BusinessException;
 import com.ping.oj.judge.JudgeService;
 import com.ping.oj.mapper.QuestionSubmitMapper;
@@ -25,6 +26,8 @@ import com.ping.oj.service.UserService;
 import com.ping.oj.utils.SqlUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.redisson.api.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -35,6 +38,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -53,6 +57,15 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
     @Resource
     @Lazy
     private JudgeService judgeService;
+
+    @Resource
+    private RedissonClient redissonClient;
+
+    @Value("${judge.user.max-concurrent}")
+    private int defaultMaxConcurrent;
+
+    @Value("${judge.user.rate-limit}")
+    private int defaultRateLimit;
 
     /**
      * 执行题目提交
@@ -75,8 +88,37 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         if (question == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "题目不存在");
         }
-        // 3. 每个用户串行提交题目
         Long userId = loginUser.getId();
+        // a. 限制单个用户的提交频率
+        int userRateLimit = getUserRateLimit(loginUser);
+        String rateKey = "user:rate:" + userId;
+        RRateLimiter rateLimiter = redissonClient.getRateLimiter(rateKey);
+        // 设置令牌桶：速率 = userRateLimit/60 个/秒，容量 = userRateLimit（突发可消耗全部令牌）
+        rateLimiter.trySetRate(RateType.OVERALL, userRateLimit, 1, RateIntervalUnit.MINUTES);
+        if (!rateLimiter.tryAcquire(1)) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "提交过于频繁，请稍后再试");
+        }
+        // b. 限制单个用户的并发提交数
+        int userMaxConcurrent = getUserMaxConcurrent(loginUser);
+        String concurrentKey = "user:concurrent:" + userId;
+        RAtomicLong concurrentCounter = redissonClient.getAtomicLong(concurrentKey);
+        // 使用分布式锁保证检查和设置的原子性
+        RLock lock = redissonClient.getLock("lock:concurrent:" + userId);
+        try {
+            lock.lock(5, TimeUnit.SECONDS);   // 尝试加锁，最多等待5秒
+            long current = concurrentCounter.get();
+            if (current >= userMaxConcurrent) {
+                throw new BusinessException(ErrorCode.OPERATION_ERROR, "您的提交任务过多，请稍后重试");
+            }
+            // 原子增加并发数
+            concurrentCounter.set(current + 1);
+            // 设置过期时间（如10分钟），防止服务宕机导致计数器无法释放
+            concurrentCounter.expire(10, TimeUnit.MINUTES);
+        } finally {
+            lock.unlock();
+        }
+
+        // 3. 每个用户串行提交题目
         QuestionSubmit questionSubmit = new QuestionSubmit();
         questionSubmit.setUserId(userId);
         questionSubmit.setQuestionId(questionId);
@@ -87,6 +129,8 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         questionSubmit.setJudgeInfo("{}");
         boolean result = this.save(questionSubmit);
         if (!result) {
+            // 保存失败，需要回滚并发数
+            concurrentCounter.decrementAndGet();
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "题目提交失败");
         }
         // 5. 更新题目提交数
@@ -98,10 +142,36 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         // 异步执行判题服务
         Long questionSubmitId = questionSubmit.getId();
         CompletableFuture.runAsync(() -> {
-            judgeService.doJudge(questionSubmitId);
+            try {
+                judgeService.doJudge(questionSubmitId);
+            } finally {
+                // 判题结束（无论成功或失败）必须减少并发数
+                concurrentCounter.decrementAndGet();
+            }
         });
         // 5. 返回提交结果
         return questionSubmitId;
+    }
+
+    /**
+     * 获取用户允许的最大并发提交数（示例：管理员用户 5，普通用户 2）
+     */
+    private int getUserMaxConcurrent(User loginUser) {
+        // 实际可从数据库用户表中获取角色字段，或从配置中心读取
+        if (loginUser.getUserRole().equals(UserConstant.ADMIN_ROLE)) {
+            return 5;
+        }
+        return defaultMaxConcurrent;
+    }
+
+    /**
+     * 获取用户每分钟允许的最大提交次数
+     */
+    private int getUserRateLimit(User loginUser) {
+        if (loginUser.getUserRole().equals(UserConstant.ADMIN_ROLE)) {
+            return 10;
+        }
+        return defaultRateLimit;
     }
 
     /**

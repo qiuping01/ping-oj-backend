@@ -103,3 +103,11 @@ knife4j:
 # 代码沙箱
 codesandbox:
   type: remote
+
+# 限制单个用户
+judge:
+  user:
+    # 默认每分钟最多提交次数
+    rate-limit: 5
+    # 默认最大并发数，同时最大提交数
+    max-concurrent: 2
