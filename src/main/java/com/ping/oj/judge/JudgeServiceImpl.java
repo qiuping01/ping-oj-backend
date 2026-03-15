@@ -115,6 +115,11 @@ public class JudgeServiceImpl implements JudgeService {
             questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.FAILED.getValue());
         } else {
             questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.SUCCEED.getValue());
+            // 更新题目通过数
+            questionService.lambdaUpdate()
+                    .eq(Question::getId, question.getId())
+                    .set(Question::getAcceptedNum, question.getAcceptedNum() + 1)
+                    .update();
         }
         questionSubmitUpdate.setJudgeInfo(JSONUtil.toJsonStr(judgeInfoResponse));
         result = questionSubmitService.updateById(questionSubmitUpdate);

@@ -15,7 +15,10 @@ import com.ping.oj.model.entity.QuestionSubmit;
 import com.ping.oj.model.entity.User;
 import com.ping.oj.model.enums.QuestionSubmitLanguageEnum;
 import com.ping.oj.model.enums.QuestionSubmitStatusEnum;
+import com.ping.oj.model.vo.LoginUserVO;
 import com.ping.oj.model.vo.QuestionSubmitVO;
+import com.ping.oj.model.vo.QuestionVO;
+import com.ping.oj.model.vo.UserVO;
 import com.ping.oj.service.QuestionService;
 import com.ping.oj.service.QuestionSubmitService;
 import com.ping.oj.service.UserService;
@@ -28,6 +31,9 @@ import org.springframework.util.CollectionUtils;
 
 import javax.annotation.Resource;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -83,6 +89,11 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         if (!result) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "题目提交失败");
         }
+        // 5. 更新题目提交数
+        questionService.lambdaUpdate()
+                .eq(Question::getId, question.getId())
+                .set(Question::getSubmitNum, question.getSubmitNum() + 1)
+                .update();
         // todo 执行判题服务
         // 异步执行判题服务
         Long questionSubmitId = questionSubmit.getId();
@@ -151,14 +162,54 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
     @Override
     public Page<QuestionSubmitVO> getQuestionSubmitVOPage(Page<QuestionSubmit> questionSubmitPage, User loginUser) {
         List<QuestionSubmit> questionSubmitList = questionSubmitPage.getRecords();
+
+
         Page<QuestionSubmitVO> questionSubmitVOPage =
                 new Page<>(questionSubmitPage.getCurrent(), questionSubmitPage.getSize(), questionSubmitPage.getTotal());
+
         if (CollectionUtils.isEmpty(questionSubmitList)) {
             return questionSubmitVOPage;
         }
+
         List<QuestionSubmitVO> questionSubmitVOList = questionSubmitList.stream()
                 .map(questionSubmit -> getQuestionSubmitVO(questionSubmit, loginUser))
                 .collect(Collectors.toList());
+        // 封装用户信息
+        Set<Long> userIdSet = questionSubmitList.stream()
+                .map(QuestionSubmit::getUserId)
+                .filter(Objects::nonNull)  // 过滤null值
+                .collect(Collectors.toSet());
+        Map<Long, List<User>> userIdUserListMap = userService.listByIds(userIdSet)
+                .stream()
+                .collect(Collectors.groupingBy(User::getId));
+        questionSubmitVOList.forEach(questionSubmitVO -> {
+            Long userId = questionSubmitVO.getUserId();
+            User user = null;
+            UserVO userVO = null;
+            if (userIdUserListMap.containsKey(userId)) {
+                user = userIdUserListMap.get(userId).get(0);
+                userVO = userService.getUserVO(user);
+            }
+            questionSubmitVO.setUserVO(userVO);
+        });
+        // 封装题目信息
+        Set<Long> questionIdSet = questionSubmitList.stream()
+                .map(QuestionSubmit::getQuestionId)
+                .filter(Objects::nonNull)  // 过滤null值
+                .collect(Collectors.toSet());
+        Map<Long, List<Question>> questionIdQuestionListMap = questionService.listByIds(questionIdSet)
+                .stream()
+                .collect(Collectors.groupingBy(Question::getId));
+        questionSubmitVOList.forEach(questionSubmitVO -> {
+            Long questionId = questionSubmitVO.getQuestionId();
+            Question question = null;
+            QuestionVO questionVO = null;
+            if (questionIdQuestionListMap.containsKey(questionId)) {
+                question = questionIdQuestionListMap.get(questionId).get(0);
+                questionVO = questionService.getQuestionVO(question, null);
+            }
+            questionSubmitVO.setQuestionVO(questionVO);
+        });
         questionSubmitVOPage.setRecords(questionSubmitVOList);
         return questionSubmitVOPage;
     }
