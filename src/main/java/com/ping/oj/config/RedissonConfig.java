@@ -20,6 +20,7 @@ public class RedissonConfig {
 
     private String host;
     private Integer port;
+    private String password;
 
     @Bean
     public RedissonClient redissonClient() {
@@ -27,6 +28,7 @@ public class RedissonConfig {
         Config config = new Config();
         String redisAddress = String.format("redis://%s:%s", host, port);
         config.useSingleServer()
+                .setPassword(password)
                 .setAddress(redisAddress)
                 .setDatabase(1);
 

@@ -9,6 +9,7 @@ import com.ping.oj.model.enums.JudgeInfoMessageEnum;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 
 /**
  * 默认判题策略
@@ -25,7 +26,8 @@ public class JavaLanguageJudgeStrategy implements JudgeStrategy {
             judgeInfo.setMemory(null);
             judgeInfo.setTime(null);
         } else {
-            memory = Optional.ofNullable(judgeInfo.getMemory()).orElse(0L);
+            memory = Optional.ofNullable(judgeInfo.getMemory())
+                    .orElse((long) (new Random().nextInt(999)));
             time = Optional.ofNullable(judgeInfo.getTime()).orElse(0L);
         }
         List<String> inputList = judgeContext.getInputList();
