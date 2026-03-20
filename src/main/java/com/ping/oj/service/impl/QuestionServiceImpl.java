@@ -192,7 +192,7 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
      * @return 题目分页
      */
     @Override
-    public Page<Question> searchFromEs(QuestionQueryRequest questionQueryRequest) {
+    public Page<QuestionVO> searchFromEs(QuestionQueryRequest questionQueryRequest) {
         // 获取参数
         Long id = questionQueryRequest.getId();
 //        Long notId = questionQueryRequest.getNotId();
@@ -244,27 +244,65 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
         }
         // 分页
         PageRequest pageRequest = PageRequest.of(current, pageSize);
+        // 构造高亮配置
+        HighlightBuilder highlightBuilder = new HighlightBuilder()
+                .field(new HighlightBuilder.Field("title")
+                        .preTags("<em>")
+                        .postTags("</em>")
+                        .fragmentSize(100)
+                        .numOfFragments(1))
+                .field(new HighlightBuilder.Field("content")
+                        .preTags("<em>")
+                        .postTags("</em>")
+                        .fragmentSize(200)
+                        .numOfFragments(2));
         // 构造查询
         NativeSearchQuery searchQuery = new NativeSearchQueryBuilder()
                 .withQuery(boolQueryBuilder)
-                .withHighlightFields(
-                        new HighlightBuilder.Field("title"),
-                        new HighlightBuilder.Field("content")
-                )
+                .withHighlightBuilder(highlightBuilder)
                 .withPageable(pageRequest)
                 .withSorts(sortBuilder)
                 .build();
+        // 执行查询
         SearchHits<QuestionEsDTO> searchHits = elasticsearchRestTemplate.search(searchQuery, QuestionEsDTO.class);
         // 复用 MySQL / MyBatis Plus 的分页对象，封装返回结果
-        Page<Question> page = new Page<>();
-        page.setTotal(searchHits.getTotalHits());
-        List<Question> resourceList = new ArrayList<>();
+        List<QuestionVO> resourceList = new ArrayList<>();
         if (searchHits.hasSearchHits()) {
             List<SearchHit<QuestionEsDTO>> searchHitList = searchHits.getSearchHits();
             for (SearchHit<QuestionEsDTO> questionEsDTOSearchHit : searchHitList) {
-                resourceList.add(QuestionEsDTO.dtoToObj(questionEsDTOSearchHit.getContent()));
+                QuestionEsDTO questionEsDTO = questionEsDTOSearchHit.getContent();
+                Question question = QuestionEsDTO.dtoToObj(questionEsDTO);
+                QuestionVO questionVO = QuestionVO.objToVo(question);
+                // 获取高亮信息
+                Map<String, List<String>> highlightFields = questionEsDTOSearchHit.getHighlightFields();
+                // 处理标题高亮
+                if (highlightFields.containsKey("title")) {
+                    String highlightedTitle = highlightFields.get("title").get(0);
+                    questionVO.setHighlightTitle(highlightedTitle);
+                } else {
+                    questionVO.setHighlightTitle(questionEsDTO.getTitle());
+                }
+                // 处理内容高亮
+                if (highlightFields.containsKey("content")) {
+                    // 如果有多个片段，用 ... 连接
+                    String highlightedContent = String.join(" ... ", highlightFields.get("content"));
+                    questionVO.setHighlightContent(highlightedContent);
+                } else {
+                    // 没有高亮时，截取前200字符作为摘要
+                    String content = questionEsDTO.getContent();
+                    if (StringUtils.isNotBlank(content)) {
+                        if (content.length() > 200) {
+                            questionVO.setHighlightContent(content.substring(0, 200) + "...");
+                        } else {
+                            questionVO.setHighlightContent(content);
+                        }
+                    }
+                }
+                resourceList.add(questionVO);
             }
         }
+        Page<QuestionVO> page = new Page<>();
+        page.setTotal(searchHits.getTotalHits());
         page.setRecords(resourceList);
         return page;
     }

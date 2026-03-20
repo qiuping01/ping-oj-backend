@@ -343,7 +343,7 @@ public class QuestionController {
         long size = questionQueryRequest.getPageSize();
         // 限制爬虫
         ThrowUtils.throwIf(size > 200, ErrorCode.PARAMS_ERROR);
-        Page<Question> questionPage = questionService.searchFromEs(questionQueryRequest);
-        return ResultUtils.success(questionService.getQuestionVOPage(questionPage, request));
+        Page<QuestionVO> questionPage = questionService.searchFromEs(questionQueryRequest);
+        return ResultUtils.success(questionPage);
     }
 }

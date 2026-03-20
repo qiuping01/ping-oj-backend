@@ -81,6 +81,10 @@ public class QuestionVO implements Serializable {
      */
     private UserVO userVO;
 
+    // 高亮字段
+    private String highlightTitle;      // 带高亮标签的标题
+    private String highlightContent;    // 带高亮标签的内容摘要
+
     /**
      * 包装类转对象
      *

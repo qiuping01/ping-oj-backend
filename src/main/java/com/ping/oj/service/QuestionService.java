@@ -57,5 +57,5 @@ public interface QuestionService extends IService<Question> {
      * @param questionQueryRequest 题目查询请求
      * @return 题目分页
      */
-    Page<Question> searchFromEs(QuestionQueryRequest questionQueryRequest);
+    Page<QuestionVO> searchFromEs(QuestionQueryRequest questionQueryRequest);
 }
