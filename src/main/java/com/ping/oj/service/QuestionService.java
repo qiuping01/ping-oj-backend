@@ -51,4 +51,11 @@ public interface QuestionService extends IService<Question> {
      */
     Page<QuestionVO> getQuestionVOPage(Page<Question> questionPage, HttpServletRequest request);
 
+    /**
+     * 从 ES 查询
+     *
+     * @param questionQueryRequest 题目查询请求
+     * @return 题目分页
+     */
+    Page<Question> searchFromEs(QuestionQueryRequest questionQueryRequest);
 }
